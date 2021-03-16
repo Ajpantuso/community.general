@@ -175,6 +175,21 @@ def _parse_repos(module):
         module.fail_json(msg='Failed to execute "%s"' % " ".join(cmd), rc=rc, stdout=stdout, stderr=stderr)
 
 
+def _unsubstituted_url(module, repo):
+    # Re-substitute literal '$releasever' if $releasever in repo url otherwise no change
+    cmd = _get_cmd('--xmlout', '--releasever', '$releasever', 'repos', repo['alias'])
+
+    if not HAS_XML:
+        module.fail_json(msg=missing_required_lib("python-xml"), exception=XML_IMP_ERR)
+    rc, stdout, stderr = module.run_command(cmd, check_rc=False)
+    if rc == 0:
+        dom = parseXML(stdout)
+        unsubstituted_url = dom.getElementsByTagName('repo')[0].getElementsByTagName('url')[0].firstChild.data
+        return unsubstituted_url
+    else:
+        module.fail_json(msg='Failed to execute "%s"' % " ".join(cmd), rc=rc, stdout=stdout, stderr=stderr)
+
+
 def _repo_changes(realrepo, repocmp):
     "Check whether the 2 given repos have different settings."
     for k in repocmp:
@@ -215,6 +230,9 @@ def repo_exists(module, repodata, overwrite_multiple):
         return (False, False, None)
     elif len(repos) == 1:
         # Found an existing repo, look for changes
+        if 'url' in repodata and "$releasever" in repodata['url']:
+            # Unsubstitute repo url if releasever variable was used
+            repos[0]['url'] = _unsubstituted_url(module, repos[0])
         has_changes = _repo_changes(repos[0], repodata)
         return (True, has_changes, repos)
     elif len(repos) >= 2:
