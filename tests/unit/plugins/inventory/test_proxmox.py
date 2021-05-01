@@ -555,6 +555,9 @@ def test_populate(inventory, mocker):
     group_qemu = inventory.inventory.groups['proxmox_pool_test']
     assert group_qemu.hosts == [host_qemu]
 
+    # check if mixed strings (keyed and unkeyed) are neither parsed nor discarded
+    assert host_qemu.get_vars()['proxmox_agent'] == "1,fstrim_cloned_disks=1"
+
     # check if qemu-test has eth0 interface in agent_interfaces fact
     assert 'eth0' in [d['name'] for d in host_qemu.get_vars()['proxmox_agent_interfaces']]
 

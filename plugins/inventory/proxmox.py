@@ -278,10 +278,6 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         vmtype_key = self.to_safe('%s%s' % (self.get_option('facts_prefix'), vmtype_key.lower()))
         self.inventory.set_variable(name, vmtype_key, vmtype)
 
-        plaintext_configs = [
-            'tags',
-        ]
-
         for config in ret:
             key = config
             key = self.to_safe('%s%s' % (self.get_option('facts_prefix'), key.lower()))
@@ -308,10 +304,15 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
                 if not (isinstance(value, int) or ',' not in value):
                     # split off strings with commas to a dict
                     # skip over any keys that cannot be processed
-                    try:
-                        value = dict(key.split("=") for key in value.split(","))
-                    except Exception:
-                        continue
+                    parsed_value = dict()
+                    for e in value.split(","):
+                        try:
+                            k, v = e.split("=")
+                        except ValueError:
+                            break
+                        parsed_value[k] = v
+                    else:
+                        value = parsed_value
 
                 self.inventory.set_variable(name, key, value)
             except NameError:
